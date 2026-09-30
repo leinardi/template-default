@@ -1,0 +1,94 @@
+---
+name: adversarial-review
+description: >
+  Adversarial code review of a set of changes to this repository — working tree, staged diff,
+  a branch vs main, a commit range, or a PR. Hunts for workflow permission and injection
+  problems, unpinned actions, shell recipes that break on unusual input, commit types that
+  ship the wrong release, and docs that no longer match the code, then reports ranked
+  findings. Use whenever the user asks to review changes/a diff/a PR/a branch, "check my work
+  before committing", "is this ready to merge", or "poke holes in this".
+---
+
+# Adversarial Review
+
+You are a hostile reviewer. Assume the change is **wrong until proven right**. Find the input,
+state or event where it breaks. A review that finds nothing is only credible after you tried to
+break it and failed.
+
+## 1. Establish the diff
+
+| User intent | Command |
+| --- | --- |
+| "my work" / uncommitted | `git status`, then `git diff HEAD` |
+| a branch / "this PR" | `git diff main...HEAD` |
+| a commit range | `git diff <base>..<head>` |
+| a GitHub PR number | `gh pr diff <n>` and `gh pr view <n>` |
+
+Read every changed file in full, not just the hunks, and the files that call or document it.
+
+## 2. Load project authority
+
+Read `AGENTS.md` first: its conventions are the review checklist's floor, and `README.md` is the
+user-facing contract a change must keep true.
+
+## 3. Repository invariants — check on every review
+
+### Workflows
+
+- Every action and reusable workflow is pinned by full commit SHA, with the version in a
+  trailing comment that matches the SHA. A tag or branch ref is a finding.
+- Top-level `permissions: contents: read`; a job that needs more says so on the job, and no
+  more than it uses. A write permission on a job that runs pull-request code is **critical**.
+- No `${{ }}` expression inlined in a `run:` script or a `github-script` body: it goes through
+  `env:`. Inlined attacker-controlled values (titles, branch names, commit messages, inputs) are
+  script injection, **critical**.
+- A job gated on `github.event_name == 'pull_request'` must not be a required check that other
+  events need to report.
+- A release or other writing workflow refuses to run from anything but the default branch.
+
+### Shell and make
+
+- Quoting: paths with spaces, empty variables, `$$` escaping in make recipes, a `\` continuation
+  on every line of a multi-line recipe.
+- Failure: `set -euo pipefail` in scripts; a step that exits 0 after a failed command (`;`
+  instead of `&&`, a pipeline without `pipefail`, `|| true` that hides a real error).
+- New targets live in a local `.mk/*.mk` listed in `MK_LOCAL_FILES`, never in the Makefile; a
+  fetched `.mk` file edited by hand is lost on the next `make mk-common-update`.
+
+### Commits and releases
+
+- Every commit is `type(scope): subject`. The type decides the release: a change that should
+  ship is a `fix` or a `feat`, a breaking one has `!`; a `chore` or `refactor` that changes
+  behaviour ships nothing. Merge commits keep every commit, so check each one.
+
+## 4. Adversarial passes
+
+- **Correctness:** inverted conditions, off-by-one, wrong variable, a default that changes what
+  an existing user gets.
+- **Empty and edge input:** unset optional inputs, no tags yet, an empty list, a first run, a
+  re-run after a partial failure.
+- **Contract drift:** README, `AGENTS.md`, `CONTRIBUTING.md` and the PR template still describe
+  what the repository does.
+
+Prefer one reproducible defect over ten "consider"s. No named input and wrong result, no finding.
+
+## 5. Verify
+
+| Diff touched | Run |
+| --- | --- |
+| anything | `make check` |
+| a workflow | `make check` (actionlint), then reason through each trigger it has: pull request, push, dispatch |
+
+Say which gates you could not run rather than implying they passed.
+
+## 6. Report
+
+Rank worst first:
+
+```text
+<path>:<line> — <severity: critical | high | medium | low>: <one-line defect>
+  Failure: <the concrete input/state → the wrong result or broken invariant>
+  Fix: <the specific change>
+```
+
+End with a verdict: **block**, **approve with nits**, or **approve**, and the gates you ran.
