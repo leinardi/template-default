@@ -39,7 +39,8 @@ Every action and reusable workflow is pinned by commit SHA, with the version in 
 5. Keep, extend or delete `release.yaml`: pass `artifact_name` to attach built files, replace it with a stack-specific release
    (e.g. swarm-scheduler-exporter's for images and binaries), or delete it, and the release sections of the docs, if the project
    never releases. The first release needs an explicit version, since there is no tag to derive it from.
-6. Tailor the invariants and the verification gates of `.agents/skills/adversarial-review/SKILL.md`.
+6. Tailor `.agents/skills/adversarial-review/SKILL.md`: replace "template-default" with the project's name in its description
+   and title, then adapt its invariants and verification gates.
 7. Run `make pre-commit-install`, then `make check`.
 8. Add the repository to gh-leinardi-iac, with `conventional-commits` among its required checks, and enable private
    vulnerability reporting, which `SECURITY.md` points to.
