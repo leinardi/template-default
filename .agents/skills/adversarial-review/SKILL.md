@@ -41,7 +41,9 @@ against `main`.
 | a commit range | `git diff <base>..<head>` |
 | a GitHub PR number | `gh pr diff <n>` and `gh pr view <n>` |
 
-Read every changed file in full, not just the hunks, and the files that call or document it.
+Read `git log --oneline` for the range: the stated intent is what the change is checked against,
+and a commit type that ships the wrong version is a finding too (pass in §4). Read every changed
+file in full, not just the hunks, and the files that call or document it.
 
 ## 2. Load project authority
 
@@ -61,6 +63,10 @@ user-facing contract a change must keep true.
   script injection, **critical**.
 - A job gated on `github.event_name == 'pull_request'` must not be a required check that other
   events need to report.
+- `ci-result` is the one required check. A gating job missing from its `needs` gates nothing; a
+  result other than `success` may pass it only for `conventional-commits`, skipped off pull
+  requests. `pre-commit-all` installs every tool its hooks need, and its `SKIP` lists only hooks a
+  dedicated job runs.
 - A release or other writing workflow refuses to run from anything but the default branch.
 
 ### Shell and make
@@ -74,9 +80,7 @@ user-facing contract a change must keep true.
 
 ### Commits and releases
 
-- Every commit is `type(scope): subject`. The type decides the release: a change that should
-  ship is a `fix` or a `feat`, a breaking one has `!`; a `chore` or `refactor` that changes
-  behaviour ships nothing. Merge commits keep every commit, so check each one.
+- Every commit is `type(scope): subject`. The type decides the release (pass in §4).
 
 ## 4. Adversarial passes
 
@@ -85,6 +89,17 @@ user-facing contract a change must keep true.
   first run, a re-run after a partial failure.
 - **Contract drift:** README, `AGENTS.md`, `CONTRIBUTING.md` and the PR template still describe
   what the repository does.
+- **Commit type matches whether it ships:** `svu` derives the release from the commits since the
+  last tag, and every commit lands as it is (merge commits). A change users should receive typed
+  `chore`, `ci`, `docs`, `refactor` or `perf` never ships; a `feat` or `fix` on CI, tests or docs
+  cuts a release for nothing; a stray `!` or `BREAKING CHANGE:` cuts a major. A `revert` of a
+  shipped `feat` or `fix` is itself a `fix`. `svu` also matches `feat`/`fix` anywhere before a
+  colon (`prefix:` counts as `fix:`). See `AGENTS.md`.
+- **A check that can no longer fail:** a hook, script or CI job guards a claim nobody re-checks by
+  hand. Make the guarded thing go wrong and see whether the check still notices. A hook whose
+  `files:` pattern matches nothing, a whole-tree hook that lost `always_run` or `stages`, a check
+  that passes on an empty file list, a `pre-commit-all` that skips the hook, or a CI step with
+  `|| true` or `continue-on-error`, is a false pass: a finding.
 
 For each candidate finding, reproduce it or trace the failing input end to end. If that confirms
 it, report it; if not, dig once more, then drop it. No named input and wrong result, no finding.
@@ -94,7 +109,8 @@ it, report it; if not, dig once more, then drop it. No named input and wrong res
 | Diff touched | Run |
 | --- | --- |
 | anything | `make check` |
-| a workflow | `make check` (actionlint), then reason through each trigger it has: pull request, push, dispatch |
+| a workflow | `make check` (actionlint), then reason through each trigger it has: pull request, push, dispatch, schedule |
+| `scripts/check-license-headers.sh` | the script, once as is and once on a file without the header (configure it first in a scratch copy if the repository has none) |
 
 Say which gates you could not run rather than implying they passed.
 
