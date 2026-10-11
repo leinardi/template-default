@@ -4,7 +4,9 @@
 
 Install [`pre-commit`](https://pre-commit.com/), then install the hooks once with
 `make pre-commit-install`. It installs both the `pre-commit` and the `commit-msg` hooks, so commit
-messages are checked when you commit. The hooks bring their own tools, shellcheck included.
+messages are checked when you commit. The hooks bring their own tools, shellcheck included;
+actionlint also checks the workflows' `run:` scripts when a [`shellcheck`](https://www.shellcheck.net/)
+is on `PATH`, as it is in CI.
 
 - `make check` runs the full pre-commit suite on every file, `make check-stage` on the staged files
   only.
@@ -33,7 +35,9 @@ The release version is derived from these types, since the last release:
 | patch | `fix` | `fix(ci): pin actionlint by SHA` |
 | none | everything else: `build`, `chore`, `ci`, `docs`, `perf`, `refactor`, `style`, `test`, `revert` | `docs(readme): fix a link` |
 
-Pick the type by whether the change should ship in a release, not by what kind of change it is.
+Pick the type by whether the change should ship in a release, not by what kind of change it is. A
+`revert` of a shipped `feat` or `fix` is itself a `fix`. The version tool matches `feat` and `fix`
+anywhere before the colon (`prefix:` counts as `fix:`), so keep such words out of other subjects.
 
 Pull requests are merged with merge commits; squash and rebase merging are disabled. Every commit
 therefore lands on `main` as it is, so each one needs a correct type, not just the pull request as a
