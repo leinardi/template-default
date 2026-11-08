@@ -11,7 +11,8 @@ on:
 
 concurrency:
   group: "${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}"
-  # Only a pull request's runs are superseded; every push to main keeps its own run.
+  # A newer pull request run cancels the one in progress; a running push to main is never cancelled.
+  # GitHub still keeps one pending run per group, so a newer push replaces a queued one.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Every job reads the repository and nothing else, unless it says otherwise below.
