@@ -42,6 +42,7 @@ assignees: []
 ## 4. Environment (if relevant)
 
 <!-- Fill in what makes sense for your question, or remove fields that don't apply. -->
+<!-- slot: environment block, the same as the bug report's -->
 
 * Project version / commit SHA: `?`
 * Operating system and version: `?`

@@ -11,6 +11,9 @@ Any HTML comment will be stripped when the markdown is rendered, so you don't ne
 
 ## Pull request checklist
 
+<!-- slot: the check command and any extra checkboxes; keep the Conventional Commits and
+validation-matrix items -->
+
 - [ ] I am targeting the `main` branch
 - [ ] I have **rebased** this branch on top of the destination branch
 - [ ] I have executed `make check` locally *before creating the commit* and it has run successfully
