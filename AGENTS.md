@@ -32,7 +32,7 @@ Makefile.
 | `Makefile`, `.mk/`, `scripts/bootstrap-mk-common.sh` | make-common: shared snippets in `MK_COMMON_FILES`, local ones in `MK_LOCAL_FILES` |
 | `.github/workflows/ci.yaml` | `pre-commit-all`, `conventional-commits` and the `ci-result` aggregator; the reviewdog jobs on pull requests |
 | `.github/workflows/release.yaml` | the **Release** workflow, on gh-reusable-workflows' `simple-tag-and-release` |
-| `.github/workflows/pre-commit-warmup.yaml` | refreshes the pre-commit cache on `main` (hook config change, weekly) and prunes the older entries |
+| `.github/workflows/pre-commit-warmup.yaml` | refreshes the pre-commit cache on `main` (hook config change, weekly) and prunes the older entries; the only writer of that cache ([GitHub conventions](#github-conventions)) |
 | `scripts/check-license-headers.sh` | the license-header check, off until the repository has a license ([License headers](#license-headers)) |
 | `.agents/skills/` | project skills; `.claude/skills` is a symlink to it |
 
@@ -54,6 +54,36 @@ Makefile.
   tool installed in `pre-commit-all`; a hook that a dedicated job runs instead is listed in
   `pre-commit-all`'s `SKIP`, with the job named in a comment.
 - `README.md` is the user-facing contract: keep it in step with what the repository does.
+
+## GitHub conventions
+
+Shared by every `leinardi/*` repository; a repository created from this template keeps them.
+
+- **Jobs:** every job sets `timeout-minutes` (a composite action cannot time out its own steps).
+  Every checkout that pushes nothing sets `persist-credentials: false`.
+- **Concurrency:** CI groups runs by `${{ github.workflow }} @ <ref>`, the ref being the pull
+  request's head label, else the head ref, else `github.ref` (see `ci.yaml`), and cancels in
+  progress on pull requests only. A warm-up uses `<name>-${{ github.ref }}`, never a
+  static group.
+- **Caches:** the default branch is the only writer, because every pull request can restore its
+  caches and the default branch cannot restore a pull request's. The pre-commit cache is saved
+  only by `pre-commit-warmup.yaml`; CI restores it with `actions/cache/restore` under the same key,
+  `pre-commit|<OS>|<resolved Python version>|<hash of .pre-commit-config.yaml>`, so CI sets up the
+  warm-up's `python_version` and installs its pre-commit version. A language cache (Rust, Go,
+  Node, buildx) saves on the default branch only; a release writes under its own prefix or scope.
+- **pre-commit** is pinned to the same version in CI, the warm-up and the
+  `gha-pre-commit-reviewdog-actions` jobs (their `pre-commit-version` input).
+- **Release:** `release.yaml` is a `workflow_dispatch` with an optional `version` and a `dry_run`,
+  and stays a thin caller of a gh-reusable-workflows workflow. svu derives the version from the
+  commits only when none is given, and is installed only then, so a version entered by hand
+  releases even when GitHub's release downloads fail.
+- **Dependabot:** monthly, `cooldown: default-days: 7`, labels `dependencies` and `ci`, one group
+  per ecosystem. An ecosystem that ships uses `fix(deps)` with `prefix-development: chore(deps)`
+  and separate production and development groups; the others use `chore(deps)`.
+- **Issue and pull request templates:** keep the Step 1/2/3 structure. A repository fills in the
+  `slot:` comments (project name, version command, the environment block as a whole, the snippet
+  language, extra checkboxes) and removes the comments. The pull request checklist always keeps
+  the Conventional Commits and validation-matrix items.
 
 ## License headers
 
