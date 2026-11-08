@@ -11,7 +11,8 @@ on:
 
 concurrency:
   group: "${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}"
-  cancel-in-progress: true
+  # Only a pull request's runs are superseded; every push to main keeps its own run.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Every job reads the repository and nothing else, unless it says otherwise below.
 permissions:
@@ -29,8 +30,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
+      # The id gives the resolved Python version, which is part of the cache key.
       - name: Set up Python
+        id: python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.x"
@@ -38,12 +43,14 @@ jobs:
       - name: Install pre-commit
         run: pip install --no-cache-dir pre-commit==4.6.2
 
-      # Restore only: pre-commit-warmup.yaml saves the entry on main under the same key.
+      # Restore only: pre-commit-warmup.yaml saves the entry on main under the same key, with the
+      # same python_version and pre-commit version as above. The hook environments are bound to the
+      # interpreter that built them, so the resolved Python version is part of the key.
       - name: Restore the pre-commit cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/pre-commit
-          key: pre-commit|${{ runner.os }}|${{ hashFiles('.pre-commit-config.yaml') }}
+          key: pre-commit|${{ runner.os }}|${{ steps.python.outputs.python-version }}|${{ hashFiles('.pre-commit-config.yaml') }}
 
       - name: Run every pre-commit hook on every file
         run: pre-commit run --all-files --show-diff-on-failure
@@ -62,6 +69,7 @@ jobs:
   actionlint:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # reviewdog posts its findings as a pull request review, which needs pull-requests: write.
     permissions:
       contents: read
@@ -72,9 +80,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run actionlint via pre-commit + reviewdog
-        uses: leinardi/gha-pre-commit-reviewdog-actions/actionlint@007919a45a04b0c52dfbb46732019dc4831fc03c # v1.0.3
+        uses: leinardi/gha-pre-commit-reviewdog-actions/actionlint@77e6e852b85ad28aa05bba731fa11be3305a5dac # v2.0.0
         with:
           from-ref: ${{ github.event.pull_request.base.sha }}
           to-ref: ${{ github.event.pull_request.head.sha }}
@@ -83,6 +92,7 @@ jobs:
   pre-commit-hooks:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # reviewdog posts its findings as a pull request review, which needs pull-requests: write.
     permissions:
       contents: read
@@ -93,9 +103,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run pre-commit hooks + reviewdog diff
-        uses: leinardi/gha-pre-commit-reviewdog-actions/pre-commit-hooks@007919a45a04b0c52dfbb46732019dc4831fc03c # v1.0.3
+        uses: leinardi/gha-pre-commit-reviewdog-actions/pre-commit-hooks@77e6e852b85ad28aa05bba731fa11be3305a5dac # v2.0.0
         with:
           from-ref: ${{ github.event.pull_request.base.sha }}
           to-ref: ${{ github.event.pull_request.head.sha }}
@@ -104,6 +115,7 @@ jobs:
   markdownlint:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # reviewdog posts its findings as a pull request review, which needs pull-requests: write.
     permissions:
       contents: read
@@ -114,9 +126,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run markdownlint-cli2 via pre-commit + reviewdog
-        uses: leinardi/gha-pre-commit-reviewdog-actions/markdownlint-cli2@007919a45a04b0c52dfbb46732019dc4831fc03c # v1.0.3
+        uses: leinardi/gha-pre-commit-reviewdog-actions/markdownlint-cli2@77e6e852b85ad28aa05bba731fa11be3305a5dac # v2.0.0
         with:
           from-ref: ${{ github.event.pull_request.base.sha }}
           to-ref: ${{ github.event.pull_request.head.sha }}
@@ -125,6 +138,7 @@ jobs:
   shellcheck:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # reviewdog posts its findings as a pull request review, which needs pull-requests: write.
     permissions:
       contents: read
@@ -135,9 +149,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run shellcheck via pre-commit + reviewdog
-        uses: leinardi/gha-pre-commit-reviewdog-actions/shellcheck@007919a45a04b0c52dfbb46732019dc4831fc03c # v1.0.3
+        uses: leinardi/gha-pre-commit-reviewdog-actions/shellcheck@77e6e852b85ad28aa05bba731fa11be3305a5dac # v2.0.0
         with:
           from-ref: ${{ github.event.pull_request.base.sha }}
           to-ref: ${{ github.event.pull_request.head.sha }}
@@ -146,6 +161,7 @@ jobs:
   yamllint:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # reviewdog posts its findings as a pull request review, which needs pull-requests: write.
     permissions:
       contents: read
@@ -156,9 +172,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run yamllint via pre-commit + reviewdog
-        uses: leinardi/gha-pre-commit-reviewdog-actions/yamllint@007919a45a04b0c52dfbb46732019dc4831fc03c # v1.0.3
+        uses: leinardi/gha-pre-commit-reviewdog-actions/yamllint@77e6e852b85ad28aa05bba731fa11be3305a5dac # v2.0.0
         with:
           from-ref: ${{ github.event.pull_request.base.sha }}
           to-ref: ${{ github.event.pull_request.head.sha }}
@@ -173,15 +190,17 @@ jobs:
     # commits. No pull-request title check: squash merging is disabled.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Validate the commit messages
-        uses: leinardi/gha-pre-commit-reviewdog-actions/conventional-commits@007919a45a04b0c52dfbb46732019dc4831fc03c # v1.0.3
+        uses: leinardi/gha-pre-commit-reviewdog-actions/conventional-commits@77e6e852b85ad28aa05bba731fa11be3305a5dac # v2.0.0
         with:
           from-ref: ${{ github.event.pull_request.base.sha }}
           to-ref: ${{ github.event.pull_request.head.sha }}
