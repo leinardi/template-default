@@ -79,7 +79,9 @@ Shared by every `leinardi/*` repository; a repository created from this template
   releases even when GitHub's release downloads fail.
 - **Dependabot:** monthly, `cooldown: default-days: 7`, labels `dependencies` and `ci`, one group
   per ecosystem. An ecosystem that ships uses `fix(deps)` with `prefix-development: chore(deps)`
-  and separate production and development groups; the others use `chore(deps)`.
+  and separate production and development groups; the others use `chore(deps)`. GitHub Actions
+  pins ship only where callers run them (an `action.yaml`, a reusable workflow): those directories
+  get their own `fix(deps)` entry, and the repository's own workflows stay `chore(deps)`.
 - **Issue and pull request templates:** keep the Step 1/2/3 structure. A repository fills in the
   `slot:` comments (project name, version command, the environment block as a whole, the snippet
   language, extra checkboxes) and removes the comments. The pull request checklist always keeps
