@@ -61,9 +61,10 @@ Shared by every `leinardi/*` repository; a repository created from this template
 
 - **Jobs:** every job sets `timeout-minutes` (a composite action cannot time out its own steps).
   Every checkout that pushes nothing sets `persist-credentials: false`.
-- **Concurrency:** CI groups runs by `${{ github.workflow }} @ <ref>`, the ref being the pull
-  request's head label, else the head ref, else `github.ref` (see `ci.yaml`), and cancels in
-  progress on pull requests only. A warm-up uses `<name>-${{ github.ref }}`, never a
+- **Concurrency:** CI groups a pull request's runs by `${{ github.workflow }} @ <head label>` and
+  cancels the older one; every other run (a push to the default branch, a dispatch) gets its own
+  group, `${{ github.run_id }}`, because GitHub keeps one pending run per group and a release gate
+  needs CI on the exact commit (see `ci.yaml`). A warm-up uses `<name>-${{ github.ref }}`, never a
   static group.
 - **Caches:** the default branch is the only writer, because every pull request can restore its
   caches and the default branch cannot restore a pull request's. The pre-commit cache is saved
