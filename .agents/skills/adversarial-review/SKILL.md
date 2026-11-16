@@ -77,15 +77,15 @@ anywhere before a colon (`prefix:` counts as `fix:`). See `AGENTS.md`.
 
 ## Gates
 
-Do not re-run the repository's gates (`make check`). The implementer is expected to run them and
-CI runs them again, but do not assume either happened: report the verification evidence you
-actually have (under adversarial-review-loop, `verification.txt` when supplied, which is the
-implementer's claim and not proof; when invoked directly, the CI status or gate output in the PR
-or session) and what is missing. Never say that a check you did not see passed. Judge whether the
-change's tests prove it: a behaviour change needs a test that fails on the old code. When invoked
-directly, one focused command (one hook: `pre-commit run <hook-id> --files <file>`) may be run to
-confirm a single suspected finding, never a full suite or gate. A candidate that is neither
-reproduced nor traced end to end is dropped.
+Do not re-run the repository's gates (`make check`). The implementer is expected to run them and CI
+runs them again, but do not assume either happened: report the verification evidence you actually
+have (under adversarial-review-loop, `verification.txt` when supplied, which is the implementer's
+claim and not proof; when invoked directly, the CI status or gate output in the PR or session) and
+what is missing. Never say that a check you did not see passed. Judge whether the change's tests
+prove it: a behaviour change needs a test that fails on the old code. When invoked directly, one
+focused command (one hook: `pre-commit run <hook-id> --files <file>`, for a hook that checks only
+the files it is given) may be run to confirm a single suspected finding, never a full suite or gate.
+A candidate that is neither reproduced nor traced end to end is dropped.
 
 ## Report
 
